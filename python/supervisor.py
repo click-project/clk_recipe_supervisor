@@ -251,7 +251,7 @@ def run(status):
     if status:
         ctx = click.get_current_context()
         ctx.invoke(_status)
-    LOGGER.status(f"Started and available on the port {config.supervisor.port}")
+    LOGGER.status(f"Started and available on http://localhost:{config.supervisor.port}")
 
 
 @supervisor.command()
