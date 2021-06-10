@@ -91,7 +91,11 @@ files = {" ".join(self.resolved_files)}
 
     def create_config(self):
         port = find_available_port(9001)
-        Path(self.port_file).write_text(str(port))
+        createfile(
+            self.port_file,
+            str(port),
+            makedirs=True
+        )
         createfile(
             self.conf_file,
             self.configuration,
