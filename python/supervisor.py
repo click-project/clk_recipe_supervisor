@@ -18,6 +18,7 @@ from click_project.lib import (
     createfile,
     updated_env,
     find_available_port,
+    rm,
 )
 from click_project.config import config
 from click_project.log import get_logger
@@ -342,6 +343,15 @@ def browse():
 def dump_config():
     "Show the configuration created for supervisor"
     print(config.supervisor.configuration)
+
+
+@supervisor.command()
+@flag("--force/--ask", help="Erase without asking")
+def clean(force):
+    "Erase all the previous data, to start afresh"
+    location = config.supervisor.location
+    if force or click.confirm(f"This will erase {location}, are you ok?"):
+        rm(location)
 
 
 @supervisor.command()
