@@ -4,6 +4,7 @@
 from pathlib import Path
 
 import click
+import os
 import webbrowser
 
 from click_project.decorators import (
@@ -37,18 +38,12 @@ class SupervisorFileList(DynamicChoice):
 class SupervisorProcessList(DynamicChoice):
     def choices(self):
         s = settings_stores["supervisor"]
-        return [
-            info["name"]
-            for info in
-            s.rpc.supervisor.getAllProcessInfo()
-        ]
+        return [info["name"] for info in s.rpc.supervisor.getAllProcessInfo()]
 
 
 class Supervisor:
     def __init__(self):
-        self.location = Path(
-            (config.local_profile or config.global_profile).location
-        ) / "supervisor"
+        self.location = Path((config.local_profile or config.global_profile).location) / "supervisor"
         self.conf_file = self.location / "supervisord.conf"
         self.socket_file = self.location / "supervisord.sock"
         self.log_file = self.location / "supervisord.log"
@@ -93,11 +88,7 @@ files = {" ".join(self.resolved_files)}
 
     def create_config(self):
         port = find_available_port(9001)
-        createfile(
-            self.port_file,
-            str(port),
-            makedirs=True
-        )
+        createfile(self.port_file, str(port), makedirs=True)
         createfile(
             self.conf_file,
             self.configuration,
@@ -113,20 +104,15 @@ files = {" ".join(self.resolved_files)}
 
     @property
     def resolved_files(self):
-        for profile in config.filter_enabled_profiles(
-                config.all_directory_profiles
-        ):
+        for profile in config.filter_enabled_profiles(config.all_directory_profiles):
             for file in profile.settings.get("supervisor").get("files", []):
-                if not(Path(file).is_absolute()):
+                if not (Path(file).is_absolute()):
                     candidate = Path(profile.location).resolve() / file
                     if candidate.exists():
                         yield str(candidate)
                     else:
                         # particular case of the project files
-                        if (
-                                config.project and
-                                (Path(config.project).resolve() / file).exists()
-                        ):
+                        if (config.project and (Path(config.project).resolve() / file).exists()):
                             yield str(Path(config.project).resolve() / file)
                         else:
                             LOGGER.warning(f"{candidate} does not exist anymore")
@@ -154,31 +140,25 @@ files = {" ".join(self.resolved_files)}
             self.shutdown()
         self.create_config()
         with updated_env(**config.external_commands_environ_variables):
-            call(
-                [
-                    "supervisord",
-                    "--config",
-                    self.conf_file,
-                ],
-            )
-
-    def ctl(self, commands=[]):
-        call(
-            [
-                "supervisorctl",
+            call([
+                "supervisord",
                 "--config",
                 self.conf_file,
-            ] + commands,
-        )
+            ], )
+
+    def ctl(self, commands=[]):
+        call([
+            "supervisorctl",
+            "--config",
+            self.conf_file,
+        ] + commands, )
 
     def log(self):
-        call(
-            [
-                "tail",
-                "-f",
-                self.log_file,
-            ],
-        )
+        call([
+            "tail",
+            "-f",
+            self.log_file,
+        ], )
 
     def shutdown(self):
         self.ctl(["shutdown"])
@@ -200,14 +180,9 @@ def files():
 def show(**kwargs):
     """Show the files used in the supervisor"""
     with Colorer(kwargs) as colorer:
-        values = {
-            k: "\n".join(v.get("files", []))
-            for k, v in config.supervisor.all_settings.items()
-        }
+        values = {k: "\n".join(v.get("files", [])) for k, v in config.supervisor.all_settings.items()}
         values = colorer.colorize(values, config.supervisor.readprofile)
-        print(
-            "\n".join(values)
-        )
+        print("\n".join(values))
 
 
 @files.command()
@@ -216,24 +191,12 @@ def add(file):
     """Add a file to be considered by the supervisor"""
     toadd = Path(file)
     if not toadd.is_absolute():
-        if (
-                toadd.resolve().is_relative_to(
-                    Path(config.supervisor.profile.location).resolve()
-                )
-        ):
-            toadd = toadd.resolve().relative_to(
-                Path(config.supervisor.profile.location).resolve()
-            )
+        if (toadd.resolve().is_relative_to(Path(config.supervisor.profile.location).resolve())):
+            toadd = toadd.resolve().relative_to(Path(config.supervisor.profile.location).resolve())
         # special case for the local profile, look into the project
         # itself
-        elif (
-                config.project
-                and
-                toadd.resolve().is_relative_to(Path(config.project).resolve())
-        ):
-            toadd = toadd.resolve().relative_to(
-                Path(config.project).resolve()
-            )
+        elif (config.project and toadd.resolve().is_relative_to(Path(config.project).resolve())):
+            toadd = toadd.resolve().relative_to(Path(config.project).resolve())
     else:
         toadd = toadd.resolve()
     toadd = str(toadd)
@@ -251,15 +214,12 @@ def remove(file):
     """Don't consider a file anymore"""
     while file in config.supervisor.files:
         config.supervisor.files.remove(file)
-    LOGGER.status(
-        f"Removed {file} from the {config.supervisor.writeprofilename} files"
-    )
+    LOGGER.status(f"Removed {file} from the {config.supervisor.writeprofilename} files")
     config.supervisor.save()
 
 
 @supervisor.command()
-@flag("--status/--no-status",
-      help="Immediately show the status")
+@flag("--status/--no-status", help="Immediately show the status")
 def run(status):
     "Run the local supervisor"
     config.supervisor.run()
@@ -300,14 +260,9 @@ def _status():
 
 
 @supervisor.command()
-@argument("process", help="The process to follow",
-          type=SupervisorProcessList())
-@option("-e", "--err/--out",
-        help="Show the error stream instead of the stdout")
-@option("-n", "--number",
-        help="The number of bytes to get from the tail",
-        type=int
-        )
+@argument("process", help="The process to follow", type=SupervisorProcessList())
+@option("-e", "--err/--out", help="Show the error stream instead of the stdout")
+@option("-n", "--number", help="The number of bytes to get from the tail", type=int)
 @flag("-f", "--follow", help="Don't stop")
 def tail(process, err, follow, number):
     "Show the output of a process"
@@ -322,11 +277,9 @@ def tail(process, err, follow, number):
 
 
 @supervisor.command()
-@argument("process", help="The process to start",
-          type=SupervisorProcessList())
+@argument("process", help="The process to start", type=SupervisorProcessList())
 @flag("-f", "--follow", help="Also follow its output")
-@option("-e", "--err/--out",
-        help="Show the error stream instead of the stdout")
+@option("-e", "--err/--out", help="Show the error stream instead of the stdout")
 def start(process, follow, err):
     "Start a process"
     config.supervisor.ctl(["start", process])
@@ -336,8 +289,7 @@ def start(process, follow, err):
 
 
 @supervisor.command()
-@argument("process", help="The process to stop",
-          type=SupervisorProcessList())
+@argument("process", help="The process to stop", type=SupervisorProcessList())
 def stop(process):
     "Stop a process"
     config.supervisor.ctl(["stop", process])
