@@ -54,6 +54,7 @@ class Supervisor:
         self.log_file = self.location / "supervisord.log"
         self.pid_file = self.location / "supervisord.pid"
         self.port_file = self.location / "port.txt"
+        self.check_and_clean_pid()
 
     @property
     def port(self):
@@ -138,6 +139,15 @@ files = {" ".join(self.resolved_files)}
 
     def save(self):
         config.supervisor.write()
+
+    def check_and_clean_pid(self):
+        if self.pid_file.exists():
+            pid = int(self.pid_file.read_text())
+            try:
+                os.kill(pid, 0)
+            except OSError:
+                # no process with such pid, clean the pid file
+                os.unlink(self.pid_file)
 
     def run(self):
         if self.pid_file.exists():
