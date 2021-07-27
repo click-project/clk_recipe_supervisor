@@ -254,9 +254,10 @@ def update():
 
 
 @supervisor.command()
-def _status():
+@argument("process", help="The process for which to show the status", type=SupervisorProcessList(), nargs=-1)
+def _status(process):
     "Show the supervisor status"
-    config.supervisor.ctl(["status"])
+    config.supervisor.ctl(["status"] + list(process))
 
 
 @supervisor.command()
