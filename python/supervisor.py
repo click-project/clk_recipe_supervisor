@@ -290,6 +290,18 @@ def start(process, follow, err):
 
 
 @supervisor.command()
+@argument("process", help="The process to restart", type=SupervisorProcessList())
+@flag("-f", "--follow", help="Also follow its output")
+@option("-e", "--err/--out", help="Show the error stream instead of the stdout")
+def restart(process, follow, err):
+    "Restart a process"
+    config.supervisor.ctl(["restart", process])
+    if follow:
+        ctx = click.get_current_context()
+        ctx.invoke(tail, process=process, err=err, follow=follow)
+
+
+@supervisor.command()
 @argument("process", help="The process to stop", type=SupervisorProcessList())
 def stop(process):
     "Stop a process"
