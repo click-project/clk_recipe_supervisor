@@ -7,25 +7,25 @@ import click
 import os
 import webbrowser
 
-from click_project.decorators import (
+from clk.decorators import (
     argument,
     flag,
     option,
     group,
     use_settings,
 )
-from click_project.lib import (
+from clk.lib import (
     call,
     createfile,
     updated_env,
     find_available_port,
     rm,
 )
-from click_project.config import config
-from click_project.log import get_logger
-from click_project.types import DynamicChoice
-from click_project.colors import Colorer
-from click_project.core import settings_stores
+from clk.config import config
+from clk.log import get_logger
+from clk.types import DynamicChoice
+from clk.colors import Colorer
+from clk.core import settings_stores
 
 LOGGER = get_logger(__name__)
 
