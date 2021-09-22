@@ -1,31 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
+import os
+import webbrowser
 from pathlib import Path
 
 import click
-import os
-import webbrowser
-
-from clk.decorators import (
-    argument,
-    flag,
-    option,
-    group,
-    use_settings,
-)
-from clk.lib import (
-    call,
-    createfile,
-    updated_env,
-    find_available_port,
-    rm,
-)
+from clk.colors import Colorer
 from clk.config import config
+from clk.core import settings_stores
+from clk.decorators import argument, flag, group, option, use_settings
+from clk.lib import call, createfile, find_available_port, rm, updated_env
 from clk.log import get_logger
 from clk.types import DynamicChoice
-from clk.colors import Colorer
-from clk.core import settings_stores
 
 LOGGER = get_logger(__name__)
 
@@ -86,6 +73,9 @@ serverurl=unix://{self.socket_file}
 files = {" ".join(self.resolved_files)}
 """
 
+    def needs_new_config(self):
+        return os.stat(self.conf_file).st_mtime < max([os.stat(file).st_mtime for file in self.resolved_files])
+
     def create_config(self):
         port = find_available_port(9001)
         createfile(self.port_file, str(port), makedirs=True)
@@ -97,8 +87,9 @@ files = {" ".join(self.resolved_files)}
 
     @property
     def rpc(self):
-        from supervisor.xmlrpc import SupervisorTransport
         from xmlrpc.client import ServerProxy
+
+        from supervisor.xmlrpc import SupervisorTransport
         s = SupervisorTransport(None, None, f"unix://{self.socket_file}")
         return ServerProxy("http://127.0.0.1", s)
 
@@ -136,15 +127,21 @@ files = {" ".join(self.resolved_files)}
                 os.unlink(self.pid_file)
 
     def run(self):
-        if self.pid_file.exists():
+        needs_new_config = self.needs_new_config()
+        already_running = self.pid_file.exists()
+        if already_running and not needs_new_config:
+            return False
+        if already_running:
             self.shutdown()
-        self.create_config()
+        if needs_new_config:
+            self.create_config()
         with updated_env(**config.external_commands_environ_variables):
             call([
                 "supervisord",
                 "--config",
                 self.conf_file,
             ], )
+        return True
 
     def ctl(self, commands=[]):
         call([
@@ -222,11 +219,12 @@ def remove(file):
 @flag("--status/--no-status", help="Immediately show the status")
 def run(status):
     "Run the local supervisor"
-    config.supervisor.run()
+    started = config.supervisor.run()
     if status:
         ctx = click.get_current_context()
         ctx.invoke(_status)
-    LOGGER.status(f"Started and available on http://localhost:{config.supervisor.port}")
+    LOGGER.status(
+        f"{'Started' if started else 'Already running'} and available on http://localhost:{config.supervisor.port}")
 
 
 @supervisor.command()
