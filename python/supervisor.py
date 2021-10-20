@@ -74,7 +74,8 @@ files = {" ".join(self.resolved_files)}
 """
 
     def needs_new_config(self):
-        return os.stat(self.conf_file).st_mtime < max([os.stat(file).st_mtime for file in self.resolved_files])
+        return not self.conf_file.exists() or os.stat(self.conf_file).st_mtime < max(
+            [os.stat(file).st_mtime for file in self.resolved_files])
 
     def create_config(self):
         port = find_available_port(9001)
@@ -158,7 +159,11 @@ files = {" ".join(self.resolved_files)}
         ], )
 
     def shutdown(self):
-        self.ctl(["shutdown"])
+        if self.pid_file.exists():
+            self.ctl(["shutdown"])
+            return True
+        else:
+            return False
 
 
 @group()
@@ -242,7 +247,9 @@ def log():
 @supervisor.command()
 def shutdown():
     "Stop the supervised programs and the supervisor"
-    config.supervisor.shutdown()
+    didit = config.supervisor.shutdown()
+    if not didit:
+        LOGGER.status("Nothing to be done. It was already shut down.")
 
 
 @supervisor.command()
